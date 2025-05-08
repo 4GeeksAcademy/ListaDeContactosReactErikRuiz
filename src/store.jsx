@@ -1,71 +1,141 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useReducer, useContext } from "react";
+import { toast } from "react-toastify";
 
-export const Context = createContext();
+const Context = createContext();
 
-export const StoreWrapper = ({ children }) => {
-  const [store, setStore] = useState({
-    contacts: [],
-  });
+export const actionTypes = {
+  SET_CONTACTS: "SET_CONTACTS",
+  ADD_CONTACT: "ADD_CONTACT",
+  DELETE_CONTACT: "DELETE_CONTACT",
+  SET_EDITING_CONTACT: "SET_EDITING_CONTACT",
+  UPDATE_CONTACT: "UPDATE_CONTACT",
+  SET_LOADING: "SET_LOADING",
+  SET_ERROR: "SET_ERROR"
+};
 
-  const AGENDA = "ErikRuiz";
-  const API = "https://playground.4geeks.com/contact";
+const initialState = {
+  contacts: [],
+  editingContact: null,
+  loading: false,
+  error: null
+};
 
-  const getContacts = async () => {
+function reducer(state, action) {
+  switch (action.type) {
+    case actionTypes.SET_CONTACTS:
+      return { ...state, contacts: action.payload, loading: false };
+    case actionTypes.ADD_CONTACT:
+      return { ...state, contacts: [...state.contacts, action.payload] };
+    case actionTypes.DELETE_CONTACT:
+      return { ...state, contacts: state.contacts.filter(c => c.id !== action.payload) };
+    case actionTypes.SET_EDITING_CONTACT:
+      return { ...state, editingContact: action.payload };
+    case actionTypes.UPDATE_CONTACT:
+      return {
+        ...state,
+        contacts: state.contacts.map(c =>
+          c.id === action.payload.id ? action.payload : c
+        ),
+        editingContact: null
+      };
+    case actionTypes.SET_LOADING:
+      return { ...state, loading: true };
+    case actionTypes.SET_ERROR:
+      return { ...state, error: action.payload, loading: false };
+    default:
+      return state;
+  }
+}
+
+export function StoreProvider({ children }) {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const fetchContacts = async () => {
+    dispatch({ type: actionTypes.SET_LOADING });
     try {
-      const response = await fetch(`https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts`);
+      const response = await fetch("https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts", {
+        headers: { Accept: "application/json" },
+      });
       const data = await response.json();
-      setStore((prev) => ({ ...prev, contacts: data }));
+      if (Array.isArray(data)) {
+        dispatch({ type: actionTypes.SET_CONTACTS, payload: data });
+      } else {
+        dispatch({ type: actionTypes.SET_CONTACTS, payload: [] });
+        toast.error("No contact list received from server.");
+      }
     } catch (error) {
-      console.error("Error cargando contactos:", error);
+      dispatch({ type: actionTypes.SET_ERROR, payload: error.message });
+      toast.error("Failed to fetch contacts");
     }
   };
 
-  const addContact = async (contact) => {
+  const addContact = async (newContact) => {
     try {
-      const response = await fetch(`https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts`, {
+      const response = await fetch("https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...contact, agenda_slug: AGENDA }),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(newContact),
       });
-      if (!response.ok) throw new Error("No se pudo crear el contacto");
-      await getContacts();
+      const data = await response.json();
+      dispatch({ type: actionTypes.ADD_CONTACT, payload: data });
     } catch (error) {
-      console.error("Error creando contacto:", error);
+      dispatch({ type: actionTypes.SET_ERROR, payload: "Failed to add contact" });
+      toast.error("Failed to add contact");
+    }
+  };
+
+  const updateContact = async (id, updatedContact) => {
+    try {
+      const response = await fetch(`https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(updatedContact),
+      });
+      const data = await response.json();
+      dispatch({ type: actionTypes.UPDATE_CONTACT, payload: data });
+    } catch (error) {
+      dispatch({ type: actionTypes.SET_ERROR, payload: "Failed to update contact" });
+      toast.error("Failed to update contact");
     }
   };
 
   const deleteContact = async (id) => {
     try {
-      await fetch(`https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts`, { method: "DELETE" });
-      await getContacts();
-    } catch (error) {
-      console.error("Error eliminando contacto:", error);
-    }
-  };
-
-  const updateContact = async (id, updated) => {
-    try {
-      const response = await fetch(`https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...updated, agenda_slug: AGENDA }),
+      await fetch(`https://playground.4geeks.com/contact/agendas/ErikRuiz/contacts/${id}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+        },
       });
-      if (!response.ok) throw new Error("No se pudo actualizar el contacto");
-      await getContacts();
+      dispatch({ type: actionTypes.DELETE_CONTACT, payload: id });
     } catch (error) {
-      console.error("Error actualizando contacto:", error);
+      dispatch({ type: actionTypes.SET_ERROR, payload: "Failed to delete contact" });
+      toast.error("Failed to delete contact");
     }
   };
 
-  useEffect(() => {
-    getContacts();
-  }, []);
-
-  const actions = { getContacts, addContact, deleteContact, updateContact };
+  const contextValue = {
+    state,
+    dispatch,
+    fetchContacts,
+    addContact,
+    updateContact,
+    deleteContact
+  };
 
   return (
-    <Context.Provider value={{ store, actions }}>
+    <Context.Provider value={contextValue}>
       {children}
     </Context.Provider>
   );
-};
+}
+
+export function useStore() {
+  return useContext(Context);
+}

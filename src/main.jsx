@@ -1,13 +1,17 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { StoreWrapper } from "./store.jsx";
-import Layout from "./Layout.jsx"; // Asegúrate de tenerlo configurado
+import AppRoutes from "./Routes";
+
+
+import "bootstrap/dist/css/bootstrap.min.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import "react-toastify/dist/ReactToastify.css";
+
+import { ToastContainer } from "react-toastify";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <StoreWrapper>
-      <Layout />
-    </StoreWrapper>
-  </BrowserRouter>
+  <React.StrictMode>
+    <AppRoutes />
+    <ToastContainer position="top-right" autoClose={3000} />
+  </React.StrictMode>
 );
