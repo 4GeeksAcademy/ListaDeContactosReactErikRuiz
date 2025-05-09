@@ -6,19 +6,25 @@ import { toast } from "react-toastify";
 function AddContact() {
   const { state, dispatch, addContact, updateContact } = useStore();
   const [form, setForm] = useState({
-    full_name: "",
+    name: "",
     email: "",
-    agenda_slug: "ErikRuiz",
-    address: "",
     phone: "",
-    id: null
+    address: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (state.editingContact) setForm({ ...state.editingContact });
-  }, [state.editingContact]);
+  if (state.editingContact) {
+    const {  name, email, phone, address } = state.editingContact;
+    setForm({
+      name,
+      email,
+      phone,
+      address,
+    });
+  }
+}, [state.editingContact]);
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -26,14 +32,13 @@ function AddContact() {
   };
 
   const isValid = () => {
-    return ["name", "email", "phone", "address"].every(
+    return ["full_name", "email", "phone", "address"].every(
       key => typeof form[key] === "string" && form[key].trim() !== ""
     );
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
-    console.log("Submitting contact:", form);
     if (!isValid()) {
       toast.error("Please fill in all required fields.");
       return;
@@ -48,7 +53,7 @@ function AddContact() {
         await addContact(form);
         toast.success("Contact added successfully");
       }
-      dispatch({ type: "SET_EDITING_CONTACT", payload: null });
+      dispatch({ type: "SET_EDITING_CONTACT", payload: form });
       navigate("/");
     } catch {
       toast.error("Failed to save contact");
