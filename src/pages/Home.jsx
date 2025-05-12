@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useStore } from "../store";
 import ContactCard from "../components/ContactCard";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 function Home() {
-  const { state, dispatch, fetchContacts, deleteContact, addContact } = useStore();
+  const { state, dispatch, fetchContacts, deleteContact } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [contactToDelete, setContactToDelete] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const ensureAgendaAndLoadContacts = async () => {
@@ -26,11 +27,9 @@ function Home() {
         }
 
         await fetchContacts();
-
-      } catch{}
-
-       
+      } catch {}
     };
+
     ensureAgendaAndLoadContacts();
   }, []);
 
@@ -63,11 +62,11 @@ function Home() {
       ) : Array.isArray(state.contacts) && state.contacts.length > 0 ? (
         state.contacts.map(contact => (
           <ContactCard
-            // key={`contact-${contact.email}`}
+            key={contact.id}
             contact={contact}
             onEdit={() => {
-            dispatch({ type: "SET_EDITING_CONTACT", payload: contact });
-            window.location.href = "/add";
+              dispatch({ type: "SET_EDITING_CONTACT", payload: contact });
+              navigate("/add");
             }}
             onDelete={() => {
               setContactToDelete(contact.id);

@@ -87,7 +87,8 @@ export const StoreProvider = ({ children }) => {
         body: JSON.stringify(newContact),
       });
       const data = await response.json();
-      dispatch({ type: actionTypes.ADD_CONTACT, payload: data.contacts });
+      console.log(data)
+      dispatch({ type: actionTypes.ADD_CONTACT, payload: data });
     } catch (error) {
       dispatch({ type: actionTypes.SET_ERROR, payload: 'Failed to add contact' });
     }
